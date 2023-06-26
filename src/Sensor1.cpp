@@ -70,8 +70,8 @@ Sensor1::fetch()
 {
     if (bme.run()) {
         _iaq = bme.iaq;
-        _co2 = bme.co2Equivalent;
-        _breathVoc = bme.breathVocEquivalent;
+        _co2Eq = bme.co2Equivalent;
+        _breathVocEq = bme.breathVocEquivalent;
         _temperature = bme.temperature;
         _humidity = bme.humidity;
         _pressure = bme.pressure;
@@ -100,15 +100,15 @@ Sensor1::iaq() const
 }
 
 float
-Sensor1::co2() const
+Sensor1::co2Eq() const
 {
-    return _co2;
+    return _co2Eq;
 }
 
 float
-Sensor1::breathVoc() const
+Sensor1::breathVocEq() const
 {
-    return _breathVoc;
+    return _breathVocEq;
 }
 
 float

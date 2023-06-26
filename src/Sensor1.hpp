@@ -3,7 +3,7 @@
 class Sensor1 {
 public:
     enum Status {
-        Ongoing,
+        Ongoing = 0,
         Finished,
     };
 
@@ -25,10 +25,10 @@ public:
     iaq() const;
 
     float
-    co2() const;
+    co2Eq() const;
 
     float
-    breathVoc() const;
+    breathVocEq() const;
 
     float
     temperature() const;
@@ -47,8 +47,8 @@ public:
 
 private:
     float _iaq{0.0f};
-    float _co2{0.0f};
-    float _breathVoc{0.0f};
+    float _co2Eq{0.0f};
+    float _breathVocEq{0.0f};
     float _temperature{0.0f};
     float _humidity{0.0f};
     float _pressure{0.0f};
