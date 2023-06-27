@@ -1,4 +1,10 @@
+#pragma once
+
 #include <Arduino.h>
+
+#include "DataValue.hpp"
+
+class Publisher;
 
 class Sensor1 {
 public:
@@ -7,13 +13,18 @@ public:
         Finished,
     };
 
-    Sensor1() = default;
+    Sensor1(Publisher& publisher);
 
     bool
     setup(uint8_t address);
 
+#if HOMEASSISTANT_INTEGRATE
+    void
+    integrate();
+#endif
+
     bool
-    fetch();
+    publish();
 
     Status
     initialStabStatus() const;
@@ -46,12 +57,13 @@ public:
     gasPercentage() const;
 
 private:
-    float _iaq{0.0f};
-    float _co2Eq{0.0f};
-    float _breathVocEq{0.0f};
-    float _temperature{0.0f};
-    float _humidity{0.0f};
-    float _pressure{0.0f};
-    float _gasResistance{0.0f};
-    float _gasPercentage{0.0f};
+    Publisher& _publisher;
+    DataValue<float> _iaq;
+    DataValue<float> _co2Eq;
+    DataValue<float> _breathVocEq;
+    DataValue<float> _temperature;
+    DataValue<float> _humidity;
+    DataValue<float> _pressure;
+    DataValue<float> _gasResistance;
+    DataValue<float> _gasPercentage;
 };

@@ -1,8 +1,14 @@
+#pragma once
+
 #include <Arduino.h>
+
+#include "DataValue.hpp"
+
+class Publisher;
 
 class Sensor2 {
 public:
-    Sensor2() = default;
+    Sensor2(Publisher& publisher);
 
     void
     setEnvironmentalData(float humidity, float temperature);
@@ -10,8 +16,13 @@ public:
     bool
     setup(uint8_t address);
 
+#if HOMEASSISTANT_INTEGRATE
+    void
+    integrate();
+#endif
+
     bool
-    fetch();
+    publish();
 
     uint16_t
     co2() const;
@@ -27,6 +38,7 @@ private:
     printError();
 
 private:
-    uint16_t _co2{0};
-    uint16_t _tvoc{0};
+    Publisher& _publisher;
+    DataValue<uint16_t> _co2;
+    DataValue<uint16_t> _tvoc;
 };

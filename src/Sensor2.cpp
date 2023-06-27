@@ -2,7 +2,16 @@
 
 #include <SparkFunCCS811.h>
 
+#include "Publisher.hpp"
+
 static CCS811 ccs;
+
+Sensor2::Sensor2(Publisher& publisher)
+    : _publisher{publisher}
+    , _co2{publisher, "CO2, ppm", "airocat/co2"}
+    , _tvoc{publisher, "TVOC, ppb", "airocat/tvoc"}
+{
+}
 
 void
 Sensor2::setEnvironmentalData(float humidity, float temperature)
@@ -23,42 +32,71 @@ Sensor2::setup(uint8_t address)
     return true;
 }
 
-bool
-Sensor2::fetch()
+#if HOMEASSISTANT_INTEGRATE
+void
+Sensor2::integrate()
 {
-    bool rv{false};
-    if (ccs.dataAvailable()) {
-        if (ccs.readAlgorithmResults() == CCS811Core::CCS811_Stat_SUCCESS) {
-            _co2 = ccs.getCO2();
-            _tvoc = ccs.getTVOC();
-            rv = true;
-        } else {
+    static StaticJsonDocument<128> json;
+    String output;
+    json["device_class"] = "carbon_dioxide";
+    json["unit_of_measurement"] = "ppm";        
+    json["entity_category"] = "diagnostic";
+    json["name"] = "airocat/co2";
+    json["state_topic"] = "airocat/co2";
+    json["value_template"] = "{{ value_json.value }}";
+    serializeJson(json, output);
+    _publisher.publish("homeassistant/sensor/airocat/co2/config", &output[0], true);
+
+    json.clear(), output.clear();
+    json["device_class"] = "volatile_organic_compounds_parts";
+    json["unit_of_measurement"] = "ppb"; 
+    json["entity_category"] = "diagnostic";
+    json["name"] = "airocat/tvoc";
+    json["state_topic"] = "airocat/tvoc";
+    json["value_template"] = "{{ value_json.value }}";
+    serializeJson(json, output);
+    _publisher.publish("homeassistant/sensor/airocat/tvoc/config", &output[0], true);
+}
+#endif
+
+bool
+Sensor2::publish()
+{
+    if (!ccs.dataAvailable()) {
+        if (ccs.checkForStatusError()) {
             reset();
+            printError();
         }
-    } else if (ccs.checkForStatusError()) {
-        reset();
-        printError();
+        return false;
     }
-    return rv;
+
+    if (ccs.readAlgorithmResults() == CCS811Core::CCS811_Stat_SUCCESS) {
+        _co2.set(ccs.getCO2());
+        _tvoc.set(ccs.getTVOC());
+    } else {
+        reset();
+    }
+
+    return true;
 }
 
 uint16_t
 Sensor2::co2() const
 {
-    return _co2;
+    return _co2.get();
 }
 
 uint16_t
 Sensor2::tvoc() const
 {
-    return _tvoc;
+    return _tvoc.get();
 }
 
 void
 Sensor2::reset()
 {
-    _co2 = 0;
-    _tvoc = 0;
+    _co2.set(0);
+    _tvoc.set(0);
 }
 
 void
