@@ -87,7 +87,7 @@ Sensor1::setup(uint8_t address)
 void
 Sensor1::integrate()
 {
-        static StaticJsonDocument<128> json;
+    static StaticJsonDocument<128> json;
     String output;
     json["device_class"] = "aqi";
     json["entity_category"] = "diagnostic";
@@ -99,11 +99,11 @@ Sensor1::integrate()
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/co2eq";
-    json["state_topic"] = "airocat/co2eq";
+    json["name"] = "airocat/co2Eq";
+    json["state_topic"] = "airocat/co2Eq";
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/co2eq/config", &output[0], true);
+    _publisher.publish("homeassistant/sensor/airocat/co2Eq/config", &output[0], true);
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
