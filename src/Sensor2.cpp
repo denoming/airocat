@@ -1,6 +1,7 @@
 #include "Sensor2.hpp"
 
 #include <SparkFunCCS811.h>
+#include <ArduinoJson.h>
 
 #include "Publisher.hpp"
 
@@ -39,7 +40,7 @@ Sensor2::integrate()
     static StaticJsonDocument<128> json;
     String output;
     json["device_class"] = "carbon_dioxide";
-    json["unit_of_measurement"] = "ppm";        
+    json["unit_of_measurement"] = "ppm";
     json["entity_category"] = "diagnostic";
     json["name"] = "airocat/co2";
     json["state_topic"] = "airocat/co2";
@@ -49,7 +50,7 @@ Sensor2::integrate()
 
     json.clear(), output.clear();
     json["device_class"] = "volatile_organic_compounds_parts";
-    json["unit_of_measurement"] = "ppb"; 
+    json["unit_of_measurement"] = "ppb";
     json["entity_category"] = "diagnostic";
     json["name"] = "airocat/tvoc";
     json["state_topic"] = "airocat/tvoc";

@@ -1,10 +1,15 @@
 #include "Sensor1.hpp"
 
+#include <EEPROM.h>
 #include <bsec.h>
+#include <ArduinoJson.h>
 
 static Bsec bme;
 
 namespace {
+
+/* Save state period: every 360 minutes (4 times a day) */
+constexpr const auto kSaveStatePeriod = UINT32_C(3 * 60 * 1000);
 
 /**
  * Configure the BSEC library:
@@ -22,26 +27,27 @@ namespace {
  * - generic_33v_300s_4d
  * - generic_33v_300s_28d
  */
-const uint8 kBsecConfig[] = {
+const uint8 BsecConfig[] = {
 #include "config/generic_33v_3s_4d/bsec_iaq.txt"
 };
 
 /* The list of sensors to activate */
-bsec_virtual_sensor_t kBsecSensorList[13] = {
-    BSEC_OUTPUT_IAQ,
-    BSEC_OUTPUT_STATIC_IAQ,
-    BSEC_OUTPUT_CO2_EQUIVALENT,
-    BSEC_OUTPUT_BREATH_VOC_EQUIVALENT,
-    BSEC_OUTPUT_RAW_TEMPERATURE,
-    BSEC_OUTPUT_RAW_PRESSURE,
-    BSEC_OUTPUT_RAW_HUMIDITY,
-    BSEC_OUTPUT_RAW_GAS,
-    BSEC_OUTPUT_STABILIZATION_STATUS,
-    BSEC_OUTPUT_RUN_IN_STATUS,
-    BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_TEMPERATURE,
-    BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
-    BSEC_OUTPUT_GAS_PERCENTAGE
-};
+bsec_virtual_sensor_t BsecSensorList[13] = {BSEC_OUTPUT_IAQ,
+                                            BSEC_OUTPUT_STATIC_IAQ,
+                                            BSEC_OUTPUT_CO2_EQUIVALENT,
+                                            BSEC_OUTPUT_BREATH_VOC_EQUIVALENT,
+                                            BSEC_OUTPUT_RAW_TEMPERATURE,
+                                            BSEC_OUTPUT_RAW_PRESSURE,
+                                            BSEC_OUTPUT_RAW_HUMIDITY,
+                                            BSEC_OUTPUT_RAW_GAS,
+                                            BSEC_OUTPUT_STABILIZATION_STATUS,
+                                            BSEC_OUTPUT_RUN_IN_STATUS,
+                                            BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_TEMPERATURE,
+                                            BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
+                                            BSEC_OUTPUT_GAS_PERCENTAGE};
+
+/* */
+uint8_t BsecState[BSEC_MAX_STATE_BLOB_SIZE]{};
 
 bool
 verifySensorStatus()
@@ -70,7 +76,54 @@ verifySensorStatus()
     return true;
 }
 
+void
+loadSensorState()
+{
+    if (EEPROM.read(0) == BSEC_MAX_STATE_BLOB_SIZE) {
+        Serial.println("Reading state from EEPROM");
+        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
+            BsecState[i] = EEPROM.read(i + 1);
+        }
+        bme.setState(BsecState);
+    } else {
+        Serial.println("Erasing EEPROM");
+        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE + 1; i++) {
+            EEPROM.write(i, 0);
+        }
+        EEPROM.commit();
+    }
 }
+
+void
+saveSensorState()
+{
+    static uint32 saveCounter{0};
+    bool needUpdate = false;
+    if (saveCounter == 0) {
+        /* First state update when IAQ accuracy is >= 3 */
+        if (bme.iaqAccuracy >= 3) {
+            needUpdate = true;
+            saveCounter++;
+        }
+    } else {
+        /* Update every kSaveStatePeriod minutes */
+        if ((saveCounter * kSaveStatePeriod) < millis()) {
+            needUpdate = true;
+            saveCounter++;
+        }
+    }
+    if (needUpdate) {
+        Serial.println("Writing state to EEPROM");
+        bme.getState(BsecState);
+        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
+            EEPROM.write(i + 1, BsecState[i]);
+        }
+        EEPROM.write(0, BSEC_MAX_STATE_BLOB_SIZE);
+        EEPROM.commit();
+    }
+}
+
+} // namespace
 
 Sensor1::Sensor1(Publisher& publisher)
     : _publisher{publisher}
@@ -88,21 +141,29 @@ Sensor1::Sensor1(Publisher& publisher)
 bool
 Sensor1::setup(uint8_t address)
 {
+    EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
+
     bme.begin(address, Wire);
     if (!verifySensorStatus()) {
         Serial.println("Error on init for BME680 sensor");
         return false;
     }
 
-    bme.setConfig(kBsecConfig);
+    bme.setConfig(BsecConfig);
     if (!verifySensorStatus()) {
         Serial.println("Error on set config for BME680 sensor");
         return false;
     }
 
-    bme.updateSubscription(kBsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
+    bme.updateSubscription(BsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
     if (!verifySensorStatus()) {
         Serial.println("Error on update subscription for BME680 sensor");
+        return false;
+    }
+
+    loadSensorState();
+    if (!verifySensorStatus()) {
+        Serial.println("Error on load sensor state for BME680 sensor");
         return false;
     }
 
@@ -220,6 +281,11 @@ Sensor1::publish()
     _pressure.set(bme.pressure);
     _gasResistance.set(bme.gasResistance);
     _gasPercentage.set(bme.gasPercentage);
+
+    saveSensorState();
+    if (!verifySensorStatus()) {
+        Serial.println("Unable save sensor state");
+    }
 
     return true;
 }

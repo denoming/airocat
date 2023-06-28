@@ -56,6 +56,5 @@ Publisher::connect()
 bool
 Publisher::publish(const char* topic, const char* payload, boolean retained)
 {
-    Serial.print("Publish to "), Serial.println(topic);
     return mqttClient.publish(topic, payload, retained);
 }
