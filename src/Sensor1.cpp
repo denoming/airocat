@@ -1,12 +1,13 @@
 #include "Sensor1.hpp"
 
-#include <EEPROM.h>
 #include <bsec.h>
+#include <EEPROM.h>
 #include <ArduinoJson.h>
 
-static Bsec bme;
-
 namespace {
+
+/* The sensor object declaration */
+Bsec Sensor;
 
 /* Save state period: every 360 minutes (4 times a day) */
 constexpr const auto kSaveStatePeriod = UINT32_C(3 * 60 * 1000);
@@ -46,95 +47,33 @@ bsec_virtual_sensor_t BsecSensorList[13] = {BSEC_OUTPUT_IAQ,
                                             BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
                                             BSEC_OUTPUT_GAS_PERCENTAGE};
 
-/* */
+/* The sensor state data */
 uint8_t BsecState[BSEC_MAX_STATE_BLOB_SIZE]{};
 
-bool
-verifySensorStatus()
-{
-    String output;
-    if (bme.bsecStatus != BSEC_OK) {
-        if (bme.bsecStatus < BSEC_OK) {
-            output = F("BSEC error code : ") + String(bme.bsecStatus);
-            Serial.println(output);
-            return false;
-        } else {
-            output = F("BSEC warning code : ") + String(bme.bsecStatus);
-            Serial.println(output);
-        }
-    }
-    if (bme.bme68xStatus != BME68X_OK) {
-        if (bme.bme68xStatus < BME68X_OK) {
-            output = F("BME680 error code : ") + String(bme.bme68xStatus);
-            Serial.println(output);
-            return false;
-        } else {
-            output = F("BME680 warning code : ") + String(bme.bme68xStatus);
-            Serial.println(output);
-        }
-    }
-    return true;
-}
-
-void
-loadSensorState()
-{
-    if (EEPROM.read(0) == BSEC_MAX_STATE_BLOB_SIZE) {
-        Serial.println("Reading state from EEPROM");
-        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
-            BsecState[i] = EEPROM.read(i + 1);
-        }
-        bme.setState(BsecState);
-    } else {
-        Serial.println("Erasing EEPROM");
-        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE + 1; i++) {
-            EEPROM.write(i, 0);
-        }
-        EEPROM.commit();
-    }
-}
-
-void
-saveSensorState()
-{
-    static uint32 saveCounter{0};
-    bool needUpdate = false;
-    if (saveCounter == 0) {
-        /* First state update when IAQ accuracy is >= 3 */
-        if (bme.iaqAccuracy >= 3) {
-            needUpdate = true;
-            saveCounter++;
-        }
-    } else {
-        /* Update every kSaveStatePeriod minutes */
-        if ((saveCounter * kSaveStatePeriod) < millis()) {
-            needUpdate = true;
-            saveCounter++;
-        }
-    }
-    if (needUpdate) {
-        Serial.println("Writing state to EEPROM");
-        bme.getState(BsecState);
-        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
-            EEPROM.write(i + 1, BsecState[i]);
-        }
-        EEPROM.write(0, BSEC_MAX_STATE_BLOB_SIZE);
-        EEPROM.commit();
-    }
-}
+/* The MQTT topics to publish to */
+const char* kIaqTopic = "airocat/iaq";
+const char* kCo2EqTopic = "airocat/co2Eq";
+const char* kBreathVocEqTopic = "airocat/breathVocEq";
+const char* kTemperatureTopic = "airocat/temperature";
+const char* kHumidityTopic = "airocat/humidity";
+const char* kPressureTopic = "airocat/pressure";
+const char* kGasResistanceTopic = "airocat/gasResistance";
+const char* kGasPercentageTopic = "airocat/gasPercentage";
+const char* kInitialStabStatusTopic = "airocat/initialStabStatus";
+const char* kPowerOnStabStatusTopic = "airocat/powerOnStabStatus";
 
 } // namespace
 
 Sensor1::Sensor1(Publisher& publisher)
     : _publisher{publisher}
-    , _iaq(publisher, "IAQ", "airocat/iaq")
-    , _co2Eq{publisher, "CO2 (equivalent)", "airocat/co2Eq"}
-    , _breathVocEq{publisher, "BreathVoc (equivalent)", "airocat/breathVocEq"}
-    , _temperature{publisher, "Temperature, °C", "airocat/temperature"}
-    , _humidity{publisher, "Humidity, %", "airocat/humidity"}
-    , _pressure{publisher, "Pressure, hPa", "airocat/pressure"}
-    , _gasResistance{publisher, "Gar (resistance), Ohm", "airocat/gasResistance"}
-    , _gasPercentage{publisher, "Gar (percentage), %", "airocat/gasPercentage"}
+    , _iaq{publisher, "IAQ", kIaqTopic}
+    , _co2Eq{publisher, "CO2 (equivalent)", kCo2EqTopic}
+    , _breathVocEq{publisher, "BreathVoc (equivalent)", kBreathVocEqTopic}
+    , _temperature{publisher, "Temperature, °C", kTemperatureTopic}
+    , _humidity{publisher, "Humidity, %", kHumidityTopic}
+    , _pressure{publisher, "Pressure, hPa", kPressureTopic}
+    , _gasResistance{publisher, "Gar (resistance), Ohm", kGasResistanceTopic}
+    , _gasPercentage{publisher, "Gar (percentage), %", kGasPercentageTopic}
 {
 }
 
@@ -143,27 +82,27 @@ Sensor1::setup(uint8_t address)
 {
     EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
 
-    bme.begin(address, Wire);
-    if (!verifySensorStatus()) {
-        Serial.println("Error on init for BME680 sensor");
+    Sensor.begin(address, Wire);
+    if (!verifyStatus()) {
+        Serial.println("BME680: Error on init");
         return false;
     }
 
-    bme.setConfig(BsecConfig);
-    if (!verifySensorStatus()) {
-        Serial.println("Error on set config for BME680 sensor");
+    Sensor.setConfig(BsecConfig);
+    if (!verifyStatus()) {
+        Serial.println("BME680: Error on set config");
         return false;
     }
 
-    bme.updateSubscription(BsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
-    if (!verifySensorStatus()) {
-        Serial.println("Error on update subscription for BME680 sensor");
+    Sensor.updateSubscription(BsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
+    if (!verifyStatus()) {
+        Serial.println("BME680: Error on update subscription");
         return false;
     }
 
-    loadSensorState();
-    if (!verifySensorStatus()) {
-        Serial.println("Error on load sensor state for BME680 sensor");
+    loadState();
+    if (!verifyStatus()) {
+        Serial.println("BME680:  Error on load sensor state");
         return false;
     }
 
@@ -178,24 +117,24 @@ Sensor1::integrate()
     String output;
     json["device_class"] = "aqi";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/iaq";
-    json["state_topic"] = "airocat/iaq";
+    json["name"] = kIaqTopic;
+    json["state_topic"] = kIaqTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/iaq/config", &output[0], true);
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/co2Eq";
-    json["state_topic"] = "airocat/co2Eq";
+    json["name"] = kCo2EqTopic;
+    json["state_topic"] = kCo2EqTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/co2Eq/config", &output[0], true);
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/breathVocEq";
-    json["state_topic"] = "airocat/breathVocEq";
+    json["name"] = kBreathVocEqTopic;
+    json["state_topic"] = kBreathVocEqTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/breathVocEq/config", &output[0], true);
@@ -204,8 +143,8 @@ Sensor1::integrate()
     json["device_class"] = "temperature";
     json["unit_of_measurement"] = "°C";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/temperature";
-    json["state_topic"] = "airocat/temperature";
+    json["name"] = kTemperatureTopic;
+    json["state_topic"] = kTemperatureTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/temperature/config", &output[0], true);
@@ -214,8 +153,8 @@ Sensor1::integrate()
     json["device_class"] = "humidity";
     json["unit_of_measurement"] = "%";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/humidity";
-    json["state_topic"] = "airocat/humidity";
+    json["name"] = kHumidityTopic;
+    json["state_topic"] = kHumidityTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/humidity/config", &output[0], true);
@@ -224,8 +163,8 @@ Sensor1::integrate()
     json["device_class"] = "pressure";
     json["unit_of_measurement"] = "hPa";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/pressure";
-    json["state_topic"] = "airocat/pressure";
+    json["name"] = kPressureTopic;
+    json["state_topic"] = kPressureTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/pressure/config", &output[0], true);
@@ -233,8 +172,8 @@ Sensor1::integrate()
     json.clear(), output.clear();
     json["unit_of_measurement"] = "Ohm";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/gasResistance";
-    json["state_topic"] = "airocat/gasResistance";
+    json["name"] = kGasResistanceTopic;
+    json["state_topic"] = kGasResistanceTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/gasResistance/config", &output[0], true);
@@ -242,24 +181,24 @@ Sensor1::integrate()
     json.clear(), output.clear();
     json["unit_of_measurement"] = "%";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/gasPercentage";
-    json["state_topic"] = "airocat/gasPercentage";
+    json["name"] = kGasPercentageTopic;
+    json["state_topic"] = kGasPercentageTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/gasPercentage/config", &output[0], true);
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/initialStabStatus";
-    json["state_topic"] = "airocat/initialStabStatus";
+    json["name"] = kInitialStabStatusTopic;
+    json["state_topic"] = kInitialStabStatusTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/initialStabStatus/config", &output[0], true);
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/powerOnStabStatus";
-    json["state_topic"] = "airocat/powerOnStabStatus";
+    json["name"] = kPowerOnStabStatusTopic;
+    json["state_topic"] = kPowerOnStabStatusTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/powerOnStabStatus/config", &output[0], true);
@@ -269,22 +208,22 @@ Sensor1::integrate()
 bool
 Sensor1::publish()
 {
-    if (!bme.run()) {
-        return verifySensorStatus();
+    if (!Sensor.run()) {
+        return verifyStatus();
     }
 
-    _iaq.set(bme.iaq);
-    _co2Eq.set(bme.co2Equivalent);
-    _breathVocEq.set(bme.breathVocEquivalent);
-    _temperature.set(bme.temperature);
-    _humidity.set(bme.humidity);
-    _pressure.set(bme.pressure);
-    _gasResistance.set(bme.gasResistance);
-    _gasPercentage.set(bme.gasPercentage);
+    _iaq.set(Sensor.iaq);
+    _co2Eq.set(Sensor.co2Equivalent);
+    _breathVocEq.set(Sensor.breathVocEquivalent);
+    _temperature.set(Sensor.temperature);
+    _humidity.set(Sensor.humidity);
+    _pressure.set(Sensor.pressure);
+    _gasResistance.set(Sensor.gasResistance);
+    _gasPercentage.set(Sensor.gasPercentage);
 
-    saveSensorState();
-    if (!verifySensorStatus()) {
-        Serial.println("Unable save sensor state");
+    saveState();
+    if (!verifyStatus()) {
+        Serial.println("BME680: Unable save sensor state");
     }
 
     return true;
@@ -293,13 +232,13 @@ Sensor1::publish()
 Sensor1::Status
 Sensor1::initialStabStatus() const
 {
-    return (bme.stabStatus == 0) ? Status::Ongoing : Status::Finished;
+    return (Sensor.stabStatus == 0) ? Status::Ongoing : Status::Finished;
 }
 
 Sensor1::Status
 Sensor1::powerOnStabStatus() const
 {
-    return (bme.runInStatus == 0) ? Status::Ongoing : Status::Finished;
+    return (Sensor.runInStatus == 0) ? Status::Ongoing : Status::Finished;
 }
 
 float
@@ -348,4 +287,78 @@ float
 Sensor1::gasPercentage() const
 {
     return _gasPercentage.get();
+}
+
+bool
+Sensor1::verifyStatus()
+{
+    String output;
+    if (Sensor.bsecStatus != BSEC_OK) {
+        if (Sensor.bsecStatus < BSEC_OK) {
+            output = "BSEC: Error " + String(Sensor.bsecStatus);
+            Serial.println(output);
+            return false;
+        } else {
+            output = "BSEC: Warning " + String(Sensor.bsecStatus);
+            Serial.println(output);
+        }
+    }
+    if (Sensor.bme68xStatus != BME68X_OK) {
+        if (Sensor.bme68xStatus < BME68X_OK) {
+            output = "BME680: Error " + String(Sensor.bme68xStatus);
+            Serial.println(output);
+            return false;
+        } else {
+            output = "BME680: Warning" + String(Sensor.bme68xStatus);
+            Serial.println(output);
+        }
+    }
+    return true;
+}
+
+void
+Sensor1::loadState()
+{
+    if (EEPROM.read(0) == BSEC_MAX_STATE_BLOB_SIZE) {
+        Serial.println("BME680: Reading state from EEPROM");
+        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
+            BsecState[i] = EEPROM.read(i + 1);
+        }
+        Sensor.setState(BsecState);
+    } else {
+        Serial.println("BME680: Erasing EEPROM");
+        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE + 1; i++) {
+            EEPROM.write(i, 0);
+        }
+        EEPROM.commit();
+    }
+}
+
+void
+Sensor1::saveState()
+{
+    static uint32 saveCounter{0};
+    bool needUpdate = false;
+    if (saveCounter == 0) {
+        /* First state update when IAQ accuracy is >= 3 */
+        if (Sensor.iaqAccuracy >= 3) {
+            needUpdate = true;
+            saveCounter++;
+        }
+    } else {
+        /* Update every kSaveStatePeriod minutes */
+        if ((saveCounter * kSaveStatePeriod) < millis()) {
+            needUpdate = true;
+            saveCounter++;
+        }
+    }
+    if (needUpdate) {
+        Serial.println("BME680: Writing state to EEPROM");
+        Sensor.getState(BsecState);
+        for (uint8_t i = 0; i < BSEC_MAX_STATE_BLOB_SIZE; i++) {
+            EEPROM.write(i + 1, BsecState[i]);
+        }
+        EEPROM.write(0, BSEC_MAX_STATE_BLOB_SIZE);
+        EEPROM.commit();
+    }
 }

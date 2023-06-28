@@ -57,6 +57,16 @@ public:
     gasPercentage() const;
 
 private:
+    static bool
+    verifyStatus();
+
+    static void
+    loadState();
+
+    static void
+    saveState();
+
+private:
     Publisher& _publisher;
     DataValue<float> _iaq;
     DataValue<float> _co2Eq;

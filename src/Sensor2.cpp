@@ -5,7 +5,16 @@
 
 #include "Publisher.hpp"
 
-static CCS811 ccs;
+namespace {
+
+/* The sensor object declaration */
+CCS811 Sensor;
+
+/* The MQTT topics to publish to */
+const char* kCo2Topic = "airocat/co2";
+const char* kTvocTopic = "airocat/tvoc";
+
+} // namespace
 
 Sensor2::Sensor2(Publisher& publisher)
     : _publisher{publisher}
@@ -17,17 +26,17 @@ Sensor2::Sensor2(Publisher& publisher)
 void
 Sensor2::setEnvironmentalData(float humidity, float temperature)
 {
-    ccs.setEnvironmentalData(humidity, temperature);
+    Sensor.setEnvironmentalData(humidity, temperature);
 }
 
 bool
 Sensor2::setup(uint8_t address)
 {
-    ccs.setI2CAddress(address);
+    Sensor.setI2CAddress(address);
 
-    if (not ccs.begin()) {
+    if (not Sensor.begin()) {
         Serial.println(F("Could init CCS811 sensor"));
-        return false;       
+        return false;
     }
 
     return true;
@@ -42,8 +51,8 @@ Sensor2::integrate()
     json["device_class"] = "carbon_dioxide";
     json["unit_of_measurement"] = "ppm";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/co2";
-    json["state_topic"] = "airocat/co2";
+    json["name"] = kCo2Topic;
+    json["state_topic"] = kCo2Topic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/co2/config", &output[0], true);
@@ -52,8 +61,8 @@ Sensor2::integrate()
     json["device_class"] = "volatile_organic_compounds_parts";
     json["unit_of_measurement"] = "ppb";
     json["entity_category"] = "diagnostic";
-    json["name"] = "airocat/tvoc";
-    json["state_topic"] = "airocat/tvoc";
+    json["name"] = kTvocTopic;
+    json["state_topic"] = kTvocTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
     _publisher.publish("homeassistant/sensor/airocat/tvoc/config", &output[0], true);
@@ -63,17 +72,17 @@ Sensor2::integrate()
 bool
 Sensor2::publish()
 {
-    if (!ccs.dataAvailable()) {
-        if (ccs.checkForStatusError()) {
+    if (!Sensor.dataAvailable()) {
+        if (Sensor.checkForStatusError()) {
             reset();
             printError();
         }
         return false;
     }
 
-    if (ccs.readAlgorithmResults() == CCS811Core::CCS811_Stat_SUCCESS) {
-        _co2.set(ccs.getCO2());
-        _tvoc.set(ccs.getTVOC());
+    if (Sensor.readAlgorithmResults() == CCS811Core::CCS811_Stat_SUCCESS) {
+        _co2.set(Sensor.getCO2());
+        _tvoc.set(Sensor.getTVOC());
     } else {
         reset();
     }
@@ -103,7 +112,7 @@ Sensor2::reset()
 void
 Sensor2::printError()
 {
-    uint8_t error = ccs.getErrorRegister();
+    uint8_t error = Sensor.getErrorRegister();
     if (error == 0xFF) {
         Serial.println("Failed to get error register value");
     } else {
