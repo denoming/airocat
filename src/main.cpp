@@ -56,7 +56,7 @@ loop()
 
     if (sensor2.publish()) {
         /* Set temperature and humidity to compensation Sensor2 */
-        sensor2.setEnvironmentalData(sensor1.temperature(), sensor1.humidity());
+        sensor2.setEnvironmentalData(sensor1.humidity(), sensor1.temperature());
     } else {
         Serial.println(F("Sensor2: No data"));
         Serial.println();
