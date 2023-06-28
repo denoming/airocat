@@ -1,6 +1,5 @@
 #include "Sensor1.hpp"
 
-#include <PubSubClient.h>
 #include <bsec.h>
 
 static Bsec bme;
