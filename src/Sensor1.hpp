@@ -13,7 +13,7 @@ public:
         Finished,
     };
 
-    Sensor1(Publisher& publisher);
+    explicit Sensor1(Publisher& publisher);
 
     bool
     setup(uint8_t address);
@@ -26,34 +26,34 @@ public:
     bool
     publish();
 
-    Status
+    [[nodiscard]] Status
     initialStabStatus() const;
 
-    Status
+    [[nodiscard]] Status
     powerOnStabStatus() const;
 
-    float
+    [[nodiscard]] float
     iaq() const;
 
-    float
+    [[nodiscard]] float
     co2Eq() const;
 
-    float
+    [[nodiscard]] float
     breathVocEq() const;
 
-    float
+    [[nodiscard]] float
     temperature() const;
 
-    float
+    [[nodiscard]] float
     humidity() const;
 
-    float
+    [[nodiscard]] float
     pressure() const;
 
-    float
+    [[nodiscard]] float
     gasResistance() const;
 
-    float
+    [[nodiscard]] float
     gasPercentage() const;
 
 private:

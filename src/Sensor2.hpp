@@ -8,12 +8,12 @@ class Publisher;
 
 class Sensor2 {
 public:
-    Sensor2(Publisher& publisher);
+    explicit Sensor2(Publisher& publisher);
 
     void
     setEnvironmentalData(float humidity, float temperature);
 
-    bool
+    [[nodiscard]] bool
     setup(uint8_t address);
 
 #if HOMEASSISTANT_INTEGRATE
@@ -21,13 +21,13 @@ public:
     integrate();
 #endif
 
-    bool
+    [[nodiscard]] bool
     publish();
 
-    uint16_t
+    [[nodiscard]] uint16_t
     co2() const;
 
-    uint16_t
+    [[nodiscard]] uint16_t
     tvoc() const;
 
 private:
