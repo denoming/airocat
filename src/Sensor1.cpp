@@ -74,6 +74,8 @@ Sensor1::Sensor1(Publisher& publisher)
     , _pressure{publisher, "Pressure, hPa", kPressureTopic}
     , _gasResistance{publisher, "Gar (resistance), Ohm", kGasResistanceTopic}
     , _gasPercentage{publisher, "Gar (percentage), %", kGasPercentageTopic}
+    , _initialStatus{publisher, "Initial status", kInitialStabStatusTopic, -1.f}
+    , _powerOnStatus{publisher, "PowerOn status", kPowerOnStabStatusTopic, -1.f}
 {
 }
 
@@ -220,6 +222,11 @@ Sensor1::publish()
     _pressure.set(Sensor.pressure);
     _gasResistance.set(Sensor.gasResistance);
     _gasPercentage.set(Sensor.gasPercentage);
+    _initialStatus.set(Sensor.stabStatus);
+    _powerOnStatus.set(Sensor.runInStatus);
+
+    Serial.print("runInStatus = "), Serial.println(Sensor.runInStatus);
+    Serial.print("stabStatus = "), Serial.println(Sensor.stabStatus);
 
     saveState();
     if (!verifyStatus()) {
@@ -232,13 +239,13 @@ Sensor1::publish()
 Sensor1::Status
 Sensor1::initialStabStatus() const
 {
-    return (Sensor.stabStatus == 0) ? Status::Ongoing : Status::Finished;
+    return (Sensor.stabStatus == 0.f) ? Status::Ongoing : Status::Finished;
 }
 
 Sensor1::Status
 Sensor1::powerOnStabStatus() const
 {
-    return (Sensor.runInStatus == 0) ? Status::Ongoing : Status::Finished;
+    return (Sensor.runInStatus == 0.f) ? Status::Ongoing : Status::Finished;
 }
 
 float

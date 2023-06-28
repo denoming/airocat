@@ -76,4 +76,6 @@ private:
     DataValue<float> _pressure;
     DataValue<float> _gasResistance;
     DataValue<float> _gasPercentage;
+    DataValue<float> _initialStatus;
+    DataValue<float> _powerOnStatus;
 };
