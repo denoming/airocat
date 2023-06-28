@@ -6,7 +6,28 @@ static Bsec bme;
 
 namespace {
 
-bsec_virtual_sensor_t kSensorList[13] = {
+/**
+ * Configure the BSEC library:
+ * 18v/33v = Voltage at Vdd. 1.8V or 3.3V
+ * 3s/300s = BSEC operating mode, BSEC_SAMPLE_RATE_LP or BSEC_SAMPLE_RATE_ULP
+ * 4d/28d = Operating age of the sensor in days
+ *
+ * Possible config variants:
+ * - generic_18v_3s_4d
+ * - generic_18v_3s_28d
+ * - generic_18v_300s_4d
+ * - generic_18v_300s_28d
+ * - generic_33v_3s_4d
+ * - generic_33v_3s_28d
+ * - generic_33v_300s_4d
+ * - generic_33v_300s_28d
+ */
+const uint8 kBsecConfig[] = {
+#include "config/generic_33v_3s_4d/bsec_iaq.txt"
+};
+
+/* The list of sensors to activate */
+bsec_virtual_sensor_t kBsecSensorList[13] = {
     BSEC_OUTPUT_IAQ,
     BSEC_OUTPUT_STATIC_IAQ,
     BSEC_OUTPUT_CO2_EQUIVALENT,
@@ -69,11 +90,17 @@ Sensor1::setup(uint8_t address)
 {
     bme.begin(address, Wire);
     if (!verifySensorStatus()) {
-        Serial.println("Error on init BME680 sensor");
+        Serial.println("Error on init for BME680 sensor");
         return false;
     }
 
-    bme.updateSubscription(kSensorList, 13, BSEC_SAMPLE_RATE_LP);
+    bme.setConfig(kBsecConfig);
+    if (!verifySensorStatus()) {
+        Serial.println("Error on set config for BME680 sensor");
+        return false;
+    }
+
+    bme.updateSubscription(kBsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
     if (!verifySensorStatus()) {
         Serial.println("Error on update subscription for BME680 sensor");
         return false;
