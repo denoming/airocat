@@ -60,11 +60,13 @@ private:
     static bool
     verifyStatus();
 
+#if AIROCAT_STATE
     static void
     loadState();
 
     static void
     saveState();
+#endif
 
 private:
     Publisher& _publisher;

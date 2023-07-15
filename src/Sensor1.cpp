@@ -47,8 +47,10 @@ bsec_virtual_sensor_t BsecSensorList[13] = {BSEC_OUTPUT_IAQ,
                                             BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
                                             BSEC_OUTPUT_GAS_PERCENTAGE};
 
+#if AIROCAT_STATE
 /* The sensor state data */
 uint8_t BsecState[BSEC_MAX_STATE_BLOB_SIZE]{};
+#endif
 
 /* The MQTT topics to publish to */
 const char* kIaqTopic = "airocat/iaq";
@@ -102,11 +104,13 @@ Sensor1::setup(uint8_t address)
         return false;
     }
 
+#if AIROCAT_STATE
     loadState();
     if (!verifyStatus()) {
         Serial.println("BME680:  Error on load sensor state");
         return false;
     }
+#endif
 
     return true;
 }
@@ -228,10 +232,12 @@ Sensor1::publish()
     Serial.print("runInStatus = "), Serial.println(Sensor.runInStatus);
     Serial.print("stabStatus = "), Serial.println(Sensor.stabStatus);
 
+#if AIROCAT_STATE
     saveState();
     if (!verifyStatus()) {
         Serial.println("BME680: Unable save sensor state");
     }
+#endif
 
     return true;
 }
@@ -323,6 +329,7 @@ Sensor1::verifyStatus()
     return true;
 }
 
+#if AIROCAT_STATE
 void
 Sensor1::loadState()
 {
@@ -369,3 +376,4 @@ Sensor1::saveState()
         EEPROM.commit();
     }
 }
+#endif
