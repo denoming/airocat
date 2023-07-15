@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "chrono": "cpp",
-        "memory": "cpp",
-        "functional": "cpp",
-        "variant": "cpp",
-        "string_view": "cpp"
-    }
-}
