@@ -108,7 +108,7 @@ Sensor1::setup(uint8_t address)
     }
 #endif
 
-    Sensor.updateSubscription(BsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
+    Sensor.updateSubscription(BsecSensorList, 13, BSEC_SAMPLE_RATE_CONT);
     if (!verifyStatus()) {
         Serial.println("BME680: Error on update subscription");
         return false;
