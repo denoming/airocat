@@ -1,8 +1,12 @@
 #include "Sensor1.hpp"
 
 #include <bsec.h>
+#if AIROCAT_STATE
 #include <EEPROM.h>
+#endif
+#if HOMEASSISTANT_INTEGRATE
 #include <ArduinoJson.h>
+#endif
 
 namespace {
 
@@ -12,6 +16,7 @@ Bsec Sensor;
 /* Save state period: every 360 minutes (4 times a day) */
 constexpr const auto kSaveStatePeriod = UINT32_C(3 * 60 * 1000);
 
+#if AIROCAT_STATE
 /**
  * Configure the BSEC library:
  * 18v/33v = Voltage at Vdd. 1.8V or 3.3V
@@ -31,6 +36,7 @@ constexpr const auto kSaveStatePeriod = UINT32_C(3 * 60 * 1000);
 const uint8 BsecConfig[] = {
 #include "config/generic_33v_3s_4d/bsec_iaq.txt"
 };
+#endif
 
 /* The list of sensors to activate */
 bsec_virtual_sensor_t BsecSensorList[13] = {BSEC_OUTPUT_IAQ,
@@ -84,7 +90,9 @@ Sensor1::Sensor1(Publisher& publisher)
 bool
 Sensor1::setup(uint8_t address)
 {
+#if AIROCAT_STATE
     EEPROM.begin(BSEC_MAX_STATE_BLOB_SIZE + 1);
+#endif
 
     Sensor.begin(address, Wire);
     if (!verifyStatus()) {
@@ -92,11 +100,13 @@ Sensor1::setup(uint8_t address)
         return false;
     }
 
+#if AIROCAT_STATE
     Sensor.setConfig(BsecConfig);
     if (!verifyStatus()) {
         Serial.println("BME680: Error on set config");
         return false;
     }
+#endif
 
     Sensor.updateSubscription(BsecSensorList, 13, BSEC_SAMPLE_RATE_LP);
     if (!verifyStatus()) {
