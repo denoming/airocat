@@ -82,8 +82,8 @@ Sensor1::Sensor1(Publisher& publisher)
     , _pressure{publisher, "Pressure, hPa", kPressureTopic}
     , _gasResistance{publisher, "Gar (resistance), Ohm", kGasResistanceTopic}
     , _gasPercentage{publisher, "Gar (percentage), %", kGasPercentageTopic}
-    , _initialStatus{publisher, "Initial status", kInitialStabStatusTopic, -1.f}
-    , _powerOnStatus{publisher, "PowerOn status", kPowerOnStabStatusTopic, -1.f}
+    , _initialStatus{publisher, "Initial stabilization status", kInitialStabStatusTopic, -1.f}
+    , _powerOnStatus{publisher, "Power-on stabilization status", kPowerOnStabStatusTopic, -1.f}
 {
 }
 
