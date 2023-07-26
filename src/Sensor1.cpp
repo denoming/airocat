@@ -239,9 +239,6 @@ Sensor1::publish()
     _initialStatus.set(Sensor.stabStatus);
     _powerOnStatus.set(Sensor.runInStatus);
 
-    Serial.print("runInStatus = "), Serial.println(Sensor.runInStatus);
-    Serial.print("stabStatus = "), Serial.println(Sensor.stabStatus);
-
 #if AIROCAT_STATE
     saveState();
     if (!verifyStatus()) {
