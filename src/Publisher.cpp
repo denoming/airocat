@@ -21,7 +21,7 @@ Publisher::setup()
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
-    while(WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
@@ -31,6 +31,7 @@ Publisher::setup()
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
+    mqttClient.setBufferSize(MQTT_MAX_PACKET_SIZE * 2);
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 }
 

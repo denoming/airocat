@@ -6,7 +6,7 @@ class Publisher {
 public:
     Publisher() = default;
 
-    bool
+    [[nodiscard]] bool
     connected() const;
 
     void
@@ -15,6 +15,6 @@ public:
     void
     connect();
 
-    bool
-    publish(const char* topic, const char* payload, boolean retained);
+    [[nodiscard]] bool
+    publish(const char* topic, const char* payload, bool retained = true);
 };
