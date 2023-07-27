@@ -49,8 +49,12 @@ loop()
 #endif
     }
 
-    if (sensor1.read() && sensor2.read()) {
-        /* Set temperature and humidity to compensation Sensor2 */
+    if (sensor1.read()) {
+        sensor1.publish();
         sensor2.setEnvironmentalData(sensor1.humidity(), sensor1.temperature());
+    }
+
+    if (sensor2.read()) {
+        sensor2.publish();
     }
 }

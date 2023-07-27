@@ -85,21 +85,10 @@ Sensor2::read()
         return false;
     }
 
-    publish();
+    _co2.set(Sensor.getCO2());
+    _tvoc.set(Sensor.getTVOC());
 
     return true;
-}
-
-uint16_t
-Sensor2::co2() const
-{
-    return _co2.get();
-}
-
-uint16_t
-Sensor2::tvoc() const
-{
-    return _tvoc.get();
 }
 
 void
@@ -117,9 +106,25 @@ Sensor2::publish()
     }
 
     if (needPublish) {
-        _co2.set(Sensor.getCO2());
-        _tvoc.set(Sensor.getTVOC());
+        if (!_co2.published()) {
+            _co2.publish();
+        }
+        if (!_tvoc.published()) {
+            _tvoc.publish();
+        }
     }
+}
+
+uint16_t
+Sensor2::co2() const
+{
+    return _co2.get();
+}
+
+uint16_t
+Sensor2::tvoc() const
+{
+    return _tvoc.get();
 }
 
 void

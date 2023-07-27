@@ -24,6 +24,9 @@ public:
     [[nodiscard]] bool
     read();
 
+    void
+    publish();
+
     [[nodiscard]] uint16_t
     co2() const;
 
@@ -31,9 +34,6 @@ public:
     tvoc() const;
 
 private:
-    void
-    publish();
-
     void
     reset();
 

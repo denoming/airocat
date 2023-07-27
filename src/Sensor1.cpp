@@ -228,7 +228,16 @@ Sensor1::read()
         return verifyStatus();
     }
 
-    publish();
+    _iaq.set(Sensor.iaq);
+    _co2Eq.set(Sensor.co2Equivalent);
+    _breathVocEq.set(Sensor.breathVocEquivalent);
+    _temperature.set(Sensor.temperature);
+    _humidity.set(Sensor.humidity);
+    _pressure.set(Sensor.pressure);
+    _gasResistance.set(Sensor.gasResistance);
+    _gasPercentage.set(Sensor.gasPercentage);
+    _initialStatus.set(Sensor.stabStatus);
+    _powerOnStatus.set(Sensor.runInStatus);
 
 #if AIROCAT_STATE
     saveState();
@@ -240,16 +249,70 @@ Sensor1::read()
     return true;
 }
 
+void
+Sensor1::publish()
+{
+    static auto lastTimestamp{0u};
+
+    const auto currTimestamp = millis();
+    const auto delay = currTimestamp - lastTimestamp;
+
+    bool needPublish{false};
+    if (delay >= AIROCAT_DELAY) {
+        lastTimestamp = currTimestamp;
+        needPublish = true;
+    }
+
+    if (needPublish) {
+        if (!_iaq.published() && stabilized()) {
+            _iaq.publish();
+        }
+        if (!_co2Eq.published() && stabilized()) {
+            _co2Eq.publish();
+        }
+        if (!_breathVocEq.published()) {
+            _breathVocEq.publish();
+        }
+        if (!_temperature.published()) {
+            _temperature.publish();
+        }
+        if (!_humidity.published()) {
+            _humidity.publish();
+        }
+        if (!_pressure.published()) {
+            _pressure.publish();
+        }
+        if (!_gasResistance.published()) {
+            _gasResistance.publish();
+        }
+        if (!_gasPercentage.published()) {
+            _gasPercentage.publish();
+        }
+        if (!_initialStatus.published()) {
+            _initialStatus.publish();
+        }
+        if (!_powerOnStatus.published()) {
+            _powerOnStatus.publish();
+        }
+    }
+}
+
+bool
+Sensor1::stabilized() const
+{
+    return (initialStabStatus() == Status::Finished && powerOnStabStatus() == Status::Finished);
+}
+
 Sensor1::Status
 Sensor1::initialStabStatus() const
 {
-    return (Sensor.stabStatus == 0.f) ? Status::Ongoing : Status::Finished;
+    return (_initialStatus.get() == 0.f) ? Status::Ongoing : Status::Finished;
 }
 
 Sensor1::Status
 Sensor1::powerOnStabStatus() const
 {
-    return (Sensor.runInStatus == 0.f) ? Status::Ongoing : Status::Finished;
+    return (_powerOnStatus.get() == 0.f) ? Status::Ongoing : Status::Finished;
 }
 
 float
@@ -298,34 +361,6 @@ float
 Sensor1::gasPercentage() const
 {
     return _gasPercentage.get();
-}
-
-void
-Sensor1::publish()
-{
-    static auto lastTimestamp{0u};
-
-    const auto currTimestamp = millis();
-    const auto delay = currTimestamp - lastTimestamp;
-
-    bool needPublish{false};
-    if (delay >= AIROCAT_DELAY) {
-        lastTimestamp = currTimestamp;
-        needPublish = true;
-    }
-
-    if (needPublish) {
-        _iaq.set(Sensor.iaq);
-        _co2Eq.set(Sensor.co2Equivalent);
-        _breathVocEq.set(Sensor.breathVocEquivalent);
-        _temperature.set(Sensor.temperature);
-        _humidity.set(Sensor.humidity);
-        _pressure.set(Sensor.pressure);
-        _gasResistance.set(Sensor.gasResistance);
-        _gasPercentage.set(Sensor.gasPercentage);
-        _initialStatus.set(Sensor.stabStatus);
-        _powerOnStatus.set(Sensor.runInStatus);
-    }
 }
 
 bool

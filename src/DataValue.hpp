@@ -15,14 +15,22 @@ public:
         , _caption{std::move(caption)}
         , _topic{std::move(topic)}
         , _value{std::move(value)}
-    {}
+        , _published{false}
+    {
+    }
+
+    [[nodiscard]] bool
+    published() const
+    {
+        return _published;
+    }
 
     void
-    set(T value, boolean retain = true)
+    set(T value)
     {
-        if (value != _value) {
+        if (_value != value) {
+            _published = false;
             _value = value;
-            publish(retain);
         }
     }
 
@@ -32,10 +40,8 @@ public:
         return _value;
     }
 
-
-private:
     void
-    publish(boolean retain)
+    publish(bool retain = false)
     {
         static StaticJsonDocument<128> json;
         static String output;
@@ -45,12 +51,16 @@ private:
         json[kFieldValue] = _value;
         serializeJson(json, output);
 
-        _publisher.publish(_topic.c_str(), &output[0], retain);
+        if (_publisher.publish(_topic.c_str(), &output[0], retain)) {
+            _published = true;
+        }
     }
 
+private:
 private:
     Publisher& _publisher;
     String _caption;
     String _topic;
     T _value{};
+    bool _published;
 };

@@ -15,7 +15,7 @@ public:
 
     explicit Sensor1(Publisher& publisher);
 
-    bool
+    [[nodiscard]] bool
     setup(uint8_t address);
 
 #if HOMEASSISTANT_INTEGRATE
@@ -23,8 +23,14 @@ public:
     integrate();
 #endif
 
-    bool
+    [[nodiscard]] bool
     read();
+
+    void
+    publish();
+
+    [[nodiscard]] bool
+    stabilized() const;
 
     [[nodiscard]] Status
     initialStabStatus() const;
@@ -57,9 +63,6 @@ public:
     gasPercentage() const;
 
 private:
-    void
-    publish();
-
     static bool
     verifyStatus();
 
