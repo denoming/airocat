@@ -5,8 +5,8 @@
 #include "Sensor1.hpp"
 #include "Sensor2.hpp"
 
-#define BME680_I2C_ADDR (0x77)
-#define CCS811_I2C_ADDR (0x5A)
+#define BME680_I2C_ADDR (UINT8_C(0x77))
+#define CCS811_I2C_ADDR (UINT8_C(0x5A))
 
 static Publisher publisher;
 static Sensor1 sensor1{publisher};
