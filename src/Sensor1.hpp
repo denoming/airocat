@@ -24,7 +24,7 @@ public:
 #endif
 
     bool
-    publish();
+    read();
 
     [[nodiscard]] Status
     initialStabStatus() const;
@@ -57,6 +57,9 @@ public:
     gasPercentage() const;
 
 private:
+    void
+    publish();
+
     static bool
     verifyStatus();
 

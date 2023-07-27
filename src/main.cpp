@@ -49,18 +49,8 @@ loop()
 #endif
     }
 
-    if (!sensor1.publish()) {
-        Serial.println(F("Sensor1: No data"));
-        Serial.println();
-    }
-
-    if (sensor2.publish()) {
+    if (sensor1.read() && sensor2.read()) {
         /* Set temperature and humidity to compensation Sensor2 */
         sensor2.setEnvironmentalData(sensor1.humidity(), sensor1.temperature());
-    } else {
-        Serial.println(F("Sensor2: No data"));
-        Serial.println();
     }
-
-    delay(AIROCAT_DELAY);
 }

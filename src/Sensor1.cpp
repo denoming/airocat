@@ -222,22 +222,13 @@ Sensor1::integrate()
 #endif
 
 bool
-Sensor1::publish()
+Sensor1::read()
 {
     if (!Sensor.run()) {
         return verifyStatus();
     }
 
-    _iaq.set(Sensor.iaq);
-    _co2Eq.set(Sensor.co2Equivalent);
-    _breathVocEq.set(Sensor.breathVocEquivalent);
-    _temperature.set(Sensor.temperature);
-    _humidity.set(Sensor.humidity);
-    _pressure.set(Sensor.pressure);
-    _gasResistance.set(Sensor.gasResistance);
-    _gasPercentage.set(Sensor.gasPercentage);
-    _initialStatus.set(Sensor.stabStatus);
-    _powerOnStatus.set(Sensor.runInStatus);
+    publish();
 
 #if AIROCAT_STATE
     saveState();
@@ -307,6 +298,34 @@ float
 Sensor1::gasPercentage() const
 {
     return _gasPercentage.get();
+}
+
+void
+Sensor1::publish()
+{
+    static auto lastTimestamp{0u};
+
+    const auto currTimestamp = millis();
+    const auto delay = currTimestamp - lastTimestamp;
+
+    bool needPublish{false};
+    if (delay >= AIROCAT_DELAY) {
+        lastTimestamp = currTimestamp;
+        needPublish = true;
+    }
+
+    if (needPublish) {
+        _iaq.set(Sensor.iaq);
+        _co2Eq.set(Sensor.co2Equivalent);
+        _breathVocEq.set(Sensor.breathVocEquivalent);
+        _temperature.set(Sensor.temperature);
+        _humidity.set(Sensor.humidity);
+        _pressure.set(Sensor.pressure);
+        _gasResistance.set(Sensor.gasResistance);
+        _gasPercentage.set(Sensor.gasPercentage);
+        _initialStatus.set(Sensor.stabStatus);
+        _powerOnStatus.set(Sensor.runInStatus);
+    }
 }
 
 bool

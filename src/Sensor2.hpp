@@ -22,7 +22,7 @@ public:
 #endif
 
     [[nodiscard]] bool
-    publish();
+    read();
 
     [[nodiscard]] uint16_t
     co2() const;
@@ -32,9 +32,12 @@ public:
 
 private:
     void
-    reset();
+    publish();
 
     void
+    reset();
+
+    static void
     printError();
 
 private:

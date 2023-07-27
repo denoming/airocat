@@ -70,7 +70,7 @@ Sensor2::integrate()
 #endif
 
 bool
-Sensor2::publish()
+Sensor2::read()
 {
     if (!Sensor.dataAvailable()) {
         if (Sensor.checkForStatusError()) {
@@ -80,12 +80,12 @@ Sensor2::publish()
         return false;
     }
 
-    if (Sensor.readAlgorithmResults() == CCS811Core::CCS811_Stat_SUCCESS) {
-        _co2.set(Sensor.getCO2());
-        _tvoc.set(Sensor.getTVOC());
-    } else {
+    if (Sensor.readAlgorithmResults() != CCS811Core::CCS811_Stat_SUCCESS) {
         reset();
+        return false;
     }
+
+    publish();
 
     return true;
 }
@@ -100,6 +100,26 @@ uint16_t
 Sensor2::tvoc() const
 {
     return _tvoc.get();
+}
+
+void
+Sensor2::publish()
+{
+    static auto lastTimestamp{0u};
+
+    const auto currTimestamp = millis();
+    const auto delay = currTimestamp - lastTimestamp;
+
+    bool needPublish{false};
+    if (delay >= AIROCAT_DELAY) {
+        lastTimestamp = currTimestamp;
+        needPublish = true;
+    }
+
+    if (needPublish) {
+        _co2.set(Sensor.getCO2());
+        _tvoc.set(Sensor.getTVOC());
+    }
 }
 
 void
