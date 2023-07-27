@@ -67,7 +67,7 @@ const char* kHumidityTopic = "airocat/humidity";
 const char* kPressureTopic = "airocat/pressure";
 const char* kGasResistanceTopic = "airocat/gasResistance";
 const char* kGasPercentageTopic = "airocat/gasPercentage";
-const char* kInitialStabStatusTopic = "airocat/initialStabStatus";
+const char* kInitStabStatusTopic = "airocat/initialStabStatus";
 const char* kPowerOnStabStatusTopic = "airocat/powerOnStabStatus";
 
 } // namespace
@@ -82,7 +82,7 @@ Sensor1::Sensor1(Publisher& publisher)
     , _pressure{publisher, "Pressure, hPa", kPressureTopic}
     , _gasResistance{publisher, "Gar (resistance), Ohm", kGasResistanceTopic}
     , _gasPercentage{publisher, "Gar (percentage), %", kGasPercentageTopic}
-    , _initialStatus{publisher, "Initial stabilization status", kInitialStabStatusTopic, -1.f}
+    , _initialStatus{publisher, "Initial stabilization status", kInitStabStatusTopic, -1.f}
     , _powerOnStatus{publisher, "Power-on stabilization status", kPowerOnStabStatusTopic, -1.f}
 {
 }
@@ -129,41 +129,49 @@ Sensor1::setup(uint8_t address)
 void
 Sensor1::integrate()
 {
-    static StaticJsonDocument<128> json;
+    DynamicJsonDocument json{256};
     String output;
     json["device_class"] = "aqi";
     json["entity_category"] = "diagnostic";
     json["name"] = kIaqTopic;
     json["state_topic"] = kIaqTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/iaq/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/iaq/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kIaqTopic);
+    }
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
     json["name"] = kCo2EqTopic;
     json["state_topic"] = kCo2EqTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/co2Eq/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/co2Eq/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kCo2EqTopic);
+    }
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
     json["name"] = kBreathVocEqTopic;
     json["state_topic"] = kBreathVocEqTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/breathVocEq/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/breathVocEq/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kBreathVocEqTopic);
+    }
 
     json.clear(), output.clear();
     json["device_class"] = "temperature";
-    json["unit_of_measurement"] = "°C";
     json["entity_category"] = "diagnostic";
+    json["unit_of_measurement"] = "C";
     json["name"] = kTemperatureTopic;
     json["state_topic"] = kTemperatureTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/temperature/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/temperature/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kTemperatureTopic);
+    }
 
     json.clear(), output.clear();
     json["device_class"] = "humidity";
@@ -171,9 +179,11 @@ Sensor1::integrate()
     json["entity_category"] = "diagnostic";
     json["name"] = kHumidityTopic;
     json["state_topic"] = kHumidityTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/humidity/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/humidity/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kHumidityTopic);
+    }
 
     json.clear(), output.clear();
     json["device_class"] = "pressure";
@@ -181,35 +191,43 @@ Sensor1::integrate()
     json["entity_category"] = "diagnostic";
     json["name"] = kPressureTopic;
     json["state_topic"] = kPressureTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/pressure/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/pressure/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kPressureTopic);
+    }
 
     json.clear(), output.clear();
     json["unit_of_measurement"] = "Ohm";
     json["entity_category"] = "diagnostic";
     json["name"] = kGasResistanceTopic;
     json["state_topic"] = kGasResistanceTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/gasResistance/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/gasResistance/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kGasResistanceTopic);
+    }
 
     json.clear(), output.clear();
     json["unit_of_measurement"] = "%";
     json["entity_category"] = "diagnostic";
     json["name"] = kGasPercentageTopic;
     json["state_topic"] = kGasPercentageTopic;
-    json["value_template"] = "{{ value_json.value }}";
+    json["value_template"] = "{{ value_json.value | round(1) }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/gasPercentage/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/gasPercentage/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kGasPercentageTopic);
+    }
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
-    json["name"] = kInitialStabStatusTopic;
-    json["state_topic"] = kInitialStabStatusTopic;
+    json["name"] = kInitStabStatusTopic;
+    json["state_topic"] = kInitStabStatusTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/initialStabStatus/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/initialStabStatus/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kInitStabStatusTopic);
+    }
 
     json.clear(), output.clear();
     json["entity_category"] = "diagnostic";
@@ -217,7 +235,9 @@ Sensor1::integrate()
     json["state_topic"] = kPowerOnStabStatusTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/powerOnStabStatus/config", &output[0], true);
+    if (!_publisher.publish("homeassistant/sensor/airocat/powerOnStabStatus/config", &output[0])) {
+        Serial.print("Unable to register: "), Serial.println(kPowerOnStabStatusTopic);
+    }
 }
 #endif
 
