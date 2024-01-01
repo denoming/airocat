@@ -55,7 +55,7 @@ Sensor2::integrate()
     json["state_topic"] = kCo2Topic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/co2/config", &output[0], true);
+    std::ignore = _publisher.publish("homeassistant/sensor/airocat/co2/config", &output[0], true);
 
     json.clear(), output.clear();
     json["device_class"] = "volatile_organic_compounds_parts";
@@ -65,7 +65,7 @@ Sensor2::integrate()
     json["state_topic"] = kTvocTopic;
     json["value_template"] = "{{ value_json.value }}";
     serializeJson(json, output);
-    _publisher.publish("homeassistant/sensor/airocat/tvoc/config", &output[0], true);
+    std::ignore = _publisher.publish("homeassistant/sensor/airocat/tvoc/config", &output[0], true);
 }
 #endif
 
