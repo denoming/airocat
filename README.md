@@ -19,6 +19,7 @@ Scheme of connecting:
 ## Indicators
 
 Following indicators are gathered by both sensors:
+
 |            Name           | Unit |     MQTT topic                 |  
 | ------------------------- | ---- | ------------------------------ |  
 | IAQ                       |      | airocat/iaq                    |  
@@ -42,6 +43,7 @@ Additionally, there is an optional `HomeAssistant` MQTT discovery mechanism supp
 To build project you need installed [PlatformIO](https://platformio.org/) platform.
 
 Following options are needed to set:
+
 |            Name           |                   Description                     |  
 | ------------------------- | ------------------------------------------------- |  
 | wifi.ssid                 | The WiFi network name                             | 
